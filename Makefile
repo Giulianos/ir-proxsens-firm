@@ -3,13 +3,13 @@ SOURCES_ASM  = $(wildcard *.S)
 OBJECTS_C    = $(SOURCES_C:.c=.o)
 OBJECTS_ASM  = $(SOURCES_ASM:.S=.o)
 INITFUNCTION = init
-MCU      		 = attiny85
+MCU          = attiny85
 CLOCK        = 8000000
 PROGRAMMER   = avrisp
 SERIALPORT   = /dev/tty.usbmodem14411
 BAUDRATE     = 19200
 FIRMWARE     = ./build/firmware.hex
-GCC       	 = avr-gcc
+GCC          = avr-gcc
 AS           = avr-gcc
 LD           = avr-ld
 OBJCPY       = avr-objcopy
@@ -21,20 +21,20 @@ OBJCPYFLAGS  = -O ihex
 build: $(FIRMWARE)
 
 $(FIRMWARE) : $(OBJECTS_ASM) $(OBJECTS_C)
-		$(LD) $(LDFLAGS) -o linked.elf $(OBJECTS_C) $(OBJECTS_ASM)
-		$(OBJCPY) $(OBJCPYFLAGS) linked.elf $(FIRMWARE)
+	  $(LD) $(LDFLAGS) -o linked.elf $(OBJECTS_C) $(OBJECTS_ASM)
+	  $(OBJCPY) $(OBJCPYFLAGS) linked.elf $(FIRMWARE)
 		rm linked.elf
 
 %.o: %.c
-		$(GCC) $(CFLAGS) $< -o $@
+	$(GCC) $(CFLAGS) $< -o $@
 
 %.o: %.S
-		$(AS) $(ASMFLAGS)  $< -o $@
+	$(AS) $(ASMFLAGS)  $< -o $@
 
 upload:
-		avrdude -v -F -p $(MCU) -c $(PROGRAMMER) -P $(SERIALPORT) -b $(BAUDRATE) -U flash:w:$(FIRMWARE):i -U lfuse:w:0xE2:m
+	avrdude -v -F -p $(MCU) -c $(PROGRAMMER) -P $(SERIALPORT) -b $(BAUDRATE) -U flash:w:$(FIRMWARE):i -U lfuse:w:0xE2:m
 
 clean:
-	  rm -rf *.o build/*.hex *.elf
+	rm -rf *.o build/*.hex *.elf
 
 .PHONY: build upload clean
