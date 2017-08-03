@@ -2,11 +2,10 @@ SOURCES_C    = $(wildcard *.c)
 SOURCES_ASM  = $(wildcard *.S)
 OBJECTS_C    = $(SOURCES_C:.c=.o)
 OBJECTS_ASM  = $(SOURCES_ASM:.S=.o)
-INITFUNCTION = init
 MCU          = attiny85
 CLOCK        = 8000000
 PROGRAMMER   = avrisp
-SERIALPORT   = /dev/tty.usbmodem14411
+SERIALPORT   = /dev/tty.usbmodem91
 BAUDRATE     = 19200
 FIRMWARE     = ./build/firmware.hex
 GCC          = avr-gcc
@@ -15,7 +14,7 @@ LD           = avr-ld
 OBJCPY       = avr-objcopy
 CFLAGS       = -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(MCU) -o hello.o hello.c
 ASMFLAGS     = -c -mmcu=$(MCU)
-LDFLAGS      = -e $(INITFUNCTION) --warn-common
+LDFLAGS      = -e vector_table --warn-common
 OBJCPYFLAGS  = -O ihex
 
 build: $(FIRMWARE)

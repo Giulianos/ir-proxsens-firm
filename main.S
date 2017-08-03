@@ -3,15 +3,68 @@
 #define GLOBAL_COUNTER r25
 #define TEMP_REG r24
 
-.global init
+.global vector_table
 
 .section .text
 
+vector_table:
 .org 0x0000
-	rjmp init
+rjmp init
+nop
+rjmp timer_handler
 
-.org 0x0003
-	rjmp timer_handler
+
+	;-------------- Timer1 ISR --------------
+
+	timer_handler:
+		cpi GLOBAL_COUNTER, 0x00
+		breq .start_burst
+
+		cpi GLOBAL_COUNTER, 0x01
+		breq .stop_burst
+
+		cpi GLOBAL_COUNTER, 0x02
+		breq .check_sensor
+
+		cpi GLOBAL_COUNTER, 0x0A
+		breq .reset_counter
+
+		inc GLOBAL_COUNTER
+		reti
+
+	.start_burst:
+		;First, reset timer counter
+		ldi TEMP_REG, 0x00
+		out _SFR_IO_ADDR(TCNT0), TEMP_REG
+		;Then, start timer
+		ldi TEMP_REG, 0x01
+		out _SFR_IO_ADDR(TCCR0B), TEMP_REG
+		inc GLOBAL_COUNTER
+		reti
+
+	.stop_burst:
+		;First lets check Sensor
+		sbic _SFR_IO_ADDR(PORTB), 0x04
+		rjmp .set_output
+		cbi _SFR_IO_ADDR(PORTB), 0x02
+		inc GLOBAL_COUNTER
+		rjmp .stop
+	.set_output:
+		sbi _SFR_IO_ADDR(PORTB), 0x02
+		inc GLOBAL_COUNTER
+	.stop:
+		;Now lets stop timer
+		ldi TEMP_REG, 0x00
+		out _SFR_IO_ADDR(TCCR0B), TEMP_REG
+		inc GLOBAL_COUNTER
+		reti
+
+	.check_sensor:
+
+
+	.reset_counter:
+		ldi GLOBAL_COUNTER, 0x00
+		reti
 
 
 ;-------------- Init routine --------------
@@ -52,59 +105,11 @@ main:
 ;Lets start timer1 (sort of timer tick) and enable interrupts
 ;Start is done in main so all intialization is already done
 sei
-ldi TEMP_REG, 0x80
+ldi TEMP_REG, 0x00
+out _SFR_IO_ADDR(TCNT1), TEMP_REG
+ldi TEMP_REG, 0x09
 out _SFR_IO_ADDR(TCCR1), TEMP_REG
 
 ;Then we just infinite loop and leave timer1's ISR do the stuff
 .infiniteloop:
 	rjmp .infiniteloop
-
-
-;-------------- 38kHz toggle routines --------------
-
-start38khz:
-	;First, reset timer counter
-	ldi TEMP_REG, 0x00
-	out _SFR_IO_ADDR(TCNT0), TEMP_REG
-	;Then, start timer
-	ldi TEMP_REG, 0x01
-	out _SFR_IO_ADDR(TCCR0B), TEMP_REG
-	ret
-
-stop38khz:
-	;Lets stop the timer
-	ldi TEMP_REG, 0x00
-	out _SFR_IO_ADDR(TCCR0B), TEMP_REG
-	ret
-
-
-;-------------- Timer1 ISR --------------
-
-timer_handler:
-	cpi GLOBAL_COUNTER, 0x00
-	breq .start_burst
-
-	cpi GLOBAL_COUNTER, 0x01
-	breq .stop_burst
-
-	cpi GLOBAL_COUNTER, 0x0A
-	breq .reset_counter
-
-	inc GLOBAL_COUNTER
-	reti
-
-.start_burst:
-	;rcall start38khz
-	sbi _SFR_IO_ADDR(PORTB), 0x02
-	inc GLOBAL_COUNTER
-	reti
-
-.stop_burst:
-	;rcall stop38khz
-	cbi _SFR_IO_ADDR(PORTB), 0x02
-	inc GLOBAL_COUNTER
-	reti
-
-.reset_counter:
-	ldi GLOBAL_COUNTER, 0x00
-	reti
