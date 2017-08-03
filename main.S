@@ -3,10 +3,6 @@
 #define ir_led 0
 #define ir_recv 4
 #define ouput_pin 2
-#define high_time 34
-#define low_time 16
-#define delay_times 200
-#define burst_times 250
 
 .global init
 
@@ -16,56 +12,33 @@
 
 
 init:
+	;Configure data direction in port b
 	ldi r24, 0x05
 	out _SFR_IO_ADDR(DDRB), r24
+	;Configure timer0 to CTC and toggle pin OC0A with no input clock (stopped)
+	ldi r24, 0x42
+	out _SFR_IO_ADDR(TCCR0A), r24
+	ldi r24, 0x00
+	out _SFR_IO_ADDR(TCCR0B), r24
+	;Configure output compare register to 0x68, Output frequency of aprox. 38kHz for prescaler 1
+	;Frequency equation at page 72 of the datasheet
+	ldi r24, 0x68
+	out _SFR_IO_ADDR(OCR0A), r24
 
 ;-------------- Main routine --------------
 
 main:
-	rcall burst
-	rcall delay
-	rjmp main
-.clear_output:
-	cbi _SFR_IO_ADDR(PORTB), ouput_pin
-	rjmp main
+	rcall start38khz
+.infiniteloop:
+	rjmp .infiniteloop
 
 ;-------------- Burst routine --------------
 
-burst:
-	ldi r23, burst_times
-
-.burst_loop:
-	dec r23
-	breq .end_burst
-
-.single_cycle:
-  sbi _SFR_IO_ADDR(PORTB), ir_led
-  ldi r24, high_time
-
-.high_stateWait:
-  dec r24
-  breq .low_state
-  rjmp .high_stateWait
-
-.low_state:
-  cbi _SFR_IO_ADDR(PORTB), ir_led
-  ldi r24, low_time
-
-.low_stateWait:
-  dec r24
-  breq .burst_loop
-  rjmp .low_stateWait
-
-.end_burst:
-	ret
-
-;-------------- Delay routine --------------
-
-delay:
-	ldi r24, delay_times
-.delay_check:
-	dec r24
-	breq .end_delay
-	rjmp .delay_check
-.end_delay:
+start38khz:
+	;First, reset timer counter
+	ldi r24, 0x00
+	out _SFR_IO_ADDR(TCNT0), r24
+	;Then, start timer
+	ldi r24, 0x01
+	out _SFR_IO_ADDR(TCCR0B), r24
 	ret
